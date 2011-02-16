@@ -122,9 +122,11 @@ static void omap_i2c_set_wfc_mpu_wkup_lat(struct device *dev, int val)
 static void __init omap_set_i2c_constraint_func(
 				struct omap_i2c_bus_platform_data *pd)
 {
+#ifdef CONFIG_ARCH_OMAP34XX
 	if (cpu_is_omap34xx())
 		pd->set_mpu_wkup_lat = omap_i2c_set_wfc_mpu_wkup_lat;
 	else
+#endif
 		pd->set_mpu_wkup_lat = NULL;
 }
 

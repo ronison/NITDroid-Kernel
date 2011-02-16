@@ -224,4 +224,6 @@ extern int  omapfb_update_window_async(struct fb_info *fbi,
 				       void (*callback)(void *),
 				       void *callback_data);
 
+extern struct platform_device omapdss_device;
+
 #endif /* __OMAPFB_H */

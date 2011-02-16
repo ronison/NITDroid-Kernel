@@ -189,7 +189,7 @@ static struct {
 	struct omapfb_color_key	color_key;
 } dispc;
 
-static struct platform_device omapdss_device = {
+struct platform_device omapdss_device = {
 	.name		= "omapdss",
 	.id		= -1,
 };

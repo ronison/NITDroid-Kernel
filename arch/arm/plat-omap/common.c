@@ -43,7 +43,7 @@
 
 #define NO_LENGTH_CHECK 0xffffffff
 
-unsigned char omap_bootloader_tag[512];
+unsigned char omap_bootloader_tag[1024];
 int omap_bootloader_tag_len;
 
 struct omap_board_config_kernel *omap_board_config;
@@ -52,10 +52,24 @@ int omap_board_config_size;
 /* used by omap-smp.c and board-4430sdp.c */
 void __iomem *gic_cpu_base_addr;
 
-#ifdef CONFIG_OMAP_PM_NONE
-struct omap_opp *mpu_opps;
-struct omap_opp *dsp_opps;
-struct omap_opp *l3_opps;
+#ifdef CONFIG_OMAP_BOOT_TAG
+
+static int __init parse_tag_omap(const struct tag *tag)
+{
+	u32 size = tag->hdr.size - (sizeof(tag->hdr) >> 2);
+
+        size <<= 2;
+	if (size > sizeof(omap_bootloader_tag))
+		return -1;
+
+	memcpy(omap_bootloader_tag, tag->u.omap.data, size);
+	omap_bootloader_tag_len = size;
+
+        return 0;
+}
+
+__tagtable(ATAG_BOARD, parse_tag_omap);
+
 #endif
 
 static const void *get_config(u16 tag, size_t len, int skip, size_t *len_out)
@@ -63,6 +77,50 @@ static const void *get_config(u16 tag, size_t len, int skip, size_t *len_out)
 	struct omap_board_config_kernel *kinfo = NULL;
 	int i;
 
+#ifdef CONFIG_OMAP_BOOT_TAG
+	struct omap_board_config_entry *info = NULL;
+
+	if (omap_bootloader_tag_len > 4)
+		info = (struct omap_board_config_entry *) omap_bootloader_tag;
+	while (info != NULL) {
+		u8 *next;
+
+		if (info->tag == tag) {
+			if (skip == 0)
+				break;
+			skip--;
+		}
+
+		if ((info->len & 0x03) != 0) {
+			/* We bail out to avoid an alignment fault */
+			printk(KERN_ERR "OMAP peripheral config: Length (%d) not word-aligned (tag %04x)\n",
+			       info->len, info->tag);
+			return NULL;
+		}
+		next = (u8 *) info + sizeof(*info) + info->len;
+		if (next >= omap_bootloader_tag + omap_bootloader_tag_len)
+			info = NULL;
+		else
+			info = (struct omap_board_config_entry *) next;
+	}
+	if (info != NULL) {
+		/* Check the length as a lame attempt to check for
+		 * binary inconsistency. */
+		if (len != NO_LENGTH_CHECK) {
+			/* Word-align len */
+			if (len & 0x03)
+				len = (len + 3) & ~0x03;
+			if (info->len != len) {
+				printk(KERN_ERR "OMAP peripheral config: Length mismatch with tag %x (want %d, got %d)\n",
+				       tag, len, info->len);
+				return NULL;
+			}
+		}
+		if (len_out != NULL)
+			*len_out = info->len;
+		return info->data;
+	}
+#endif
 	/* Try to find the config from the board-specific structures
 	 * in the kernel. */
 	for (i = 0; i < omap_board_config_size; i++) {
@@ -181,10 +239,9 @@ unsigned long long sched_clock(void)
 /**
  * read_persistent_clock -  Return time from a persistent clock.
  *
- * Reads the time from a source which isn't disabled during PM: 32k sync
- * Convert the cycles elapsed since last read into nsecs and adds to
- * a monotonically increasing timespec.
- *
+ * Reads the time from a source which isn't disabled during PM, the
+ * 32k sync timer.  Convert the cycles elapsed since last read into
+ * nsecs and adds to a monotonically increasing timespec.
  */
 static struct timespec persistent_ts;
 static cycles_t cycles, last_cycles;
@@ -197,14 +254,10 @@ void read_persistent_clock(struct timespec *ts)
 	last_cycles = cycles;
 	cycles = clocksource_32k.read(&clocksource_32k);
 	delta = cycles - last_cycles;
-	if (unlikely(cycles < last_cycles)) {
-		pr_warning("%s: WRAP\n", __func__);
-		delta = last_cycles - cycles;
-	}
 
 	nsecs = clocksource_cyc2ns(delta,
 				   clocksource_32k.mult, clocksource_32k.shift);
-		
+
 	timespec_add_ns(tsp, nsecs);
 	*ts = *tsp;
 }
@@ -317,16 +370,18 @@ void __init omap2_set_globals_343x(void)
 #if defined(CONFIG_ARCH_OMAP4)
 static struct omap_globals omap4_globals = {
 	.class	= OMAP443X_CLASS,
-	.tap	= OMAP2_L4_IO_ADDRESS(0x4830a000),
+	.tap	= OMAP2_L4_IO_ADDRESS(OMAP443X_SCM_BASE),
 	.ctrl	= OMAP2_L4_IO_ADDRESS(OMAP443X_CTRL_BASE),
 	.prm	= OMAP2_L4_IO_ADDRESS(OMAP4430_PRM_BASE),
 	.cm	= OMAP2_L4_IO_ADDRESS(OMAP4430_CM_BASE),
+	.cm2	= OMAP2_L4_IO_ADDRESS(OMAP4430_CM2_BASE),
 };
 
 void __init omap2_set_globals_443x(void)
 {
 	omap2_set_globals_tap(&omap4_globals);
 	omap2_set_globals_control(&omap4_globals);
+	omap2_set_globals_prcm(&omap4_globals);
 }
 #endif
 
