@@ -79,7 +79,10 @@ obj-$(CONFIG_MACH_OMAP3_PANDORA)	+= board-omap3pandora.o \
 					   mmc-twl4030.o
 obj-$(CONFIG_MACH_OMAP_3430SDP)		+= board-3430sdp.o \
 					   mmc-twl4030.o
-obj-$(CONFIG_MACH_NOKIA_N8X0)		+= board-n8x0.o
+obj-$(CONFIG_MACH_NOKIA_N8X0)		+= board-n8x0.o \
+					   board-n8x0-mmc.o
+obj-$(CONFIG_MACH_NOKIA_N8X0_LCD)	+= board-n8x0-lcd.o
+obj-$(CONFIG_MACH_NOKIA_N8X0_USB)	+= board-n8x0-usb.o
 obj-$(CONFIG_MACH_OMAP_ZOOM2)		+= board-zoom2.o \
 					   mmc-twl4030.o \
 					   board-ldp-flash.o \
