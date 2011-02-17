@@ -170,7 +170,7 @@ static int ctrl_init(struct omapfb_device *fbdev)
 		/* 12 bpp is packed in 16 bits */
 		if (bpp == 12)
 			bpp = 16;
-		def_size = def_vxres * def_vyres * bpp / 8;
+		def_size = def_vxres * def_vyres * 2* bpp / 8;
 		fbdev->mem_desc.region_cnt = 1;
 		fbdev->mem_desc.region[0].size = PAGE_ALIGN(def_size);
 	}
@@ -434,6 +434,7 @@ static void set_fb_fix(struct fb_info *fbi, int from_init)
 	}
 	fix->accel		= FB_ACCEL_OMAP1610;
 	fix->line_length	= var->xres_virtual * bpp / 8;
+        fix->ypanstep           = 1;
 }
 
 static int set_color_mode(struct omapfb_plane_struct *plane,
@@ -1505,7 +1506,7 @@ static int fbinfo_init(struct omapfb_device *fbdev, struct fb_info *info)
 	var->xres = def_vxres;
 	var->yres = def_vyres;
 	var->xres_virtual = def_vxres;
-	var->yres_virtual = def_vyres;
+	var->yres_virtual = def_vyres * 2;
 	var->rotate	  = def_rotate;
 	var->bits_per_pixel = fbdev->panel->bpp;
 
