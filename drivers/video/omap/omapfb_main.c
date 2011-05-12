@@ -170,7 +170,7 @@ static int ctrl_init(struct omapfb_device *fbdev)
 		/* 12 bpp is packed in 16 bits */
 		if (bpp == 12)
 			bpp = 16;
-		def_size = def_vxres * def_vyres * 2* bpp / 8;
+		def_size = def_vxres * def_vyres * 2 * bpp / 8;
 		fbdev->mem_desc.region_cnt = 1;
 		fbdev->mem_desc.region[0].size = PAGE_ALIGN(def_size);
 	}

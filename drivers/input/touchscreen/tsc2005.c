@@ -276,6 +276,7 @@ static void tsc2005_write(struct tsc2005 *ts, u8 reg, u16 value)
 	xfer.bits_per_word = 24;
 
 	spi_message_init(&msg);
+        msg.spi = ts->spi;
 	spi_message_add_tail(&xfer, &msg);
 	spi_sync(ts->spi, &msg);
 }
@@ -304,6 +305,10 @@ static void tsc2005_ts_update_pen_state(struct tsc2005 *ts,
 					int x, int y, int pressure)
 {
 	if (pressure) {
+                x = abs((x - 260) * 800 / 3500);
+                y = abs((3550 - y) * 480 / 3000);
+                printk(KERN_INFO "TSC2005: (%d %d %d)\n",
+                       x, y, pressure);
 		input_report_abs(ts->idev, ABS_X, x);
 		input_report_abs(ts->idev, ABS_Y, y);
 		input_report_abs(ts->idev, ABS_PRESSURE, pressure);
@@ -312,6 +317,7 @@ static void tsc2005_ts_update_pen_state(struct tsc2005 *ts,
 			ts->pen_down = 1;
 		}
 	} else {
+                printk(KERN_INFO "TSC2005: no pressure\n");
 		input_report_abs(ts->idev, ABS_PRESSURE, 0);
 		if (ts->pen_down) {
 			input_report_key(ts->idev, BTN_TOUCH, 0);
@@ -746,9 +752,9 @@ static int __devinit tsc2005_ts_init(struct tsc2005 *ts,
 	ts->x_plate_ohm		= pdata->ts_x_plate_ohm ? : 280;
 	ts->hw_avg_max		= pdata->ts_hw_avg;
 	ts->stab_time		= pdata->ts_stab_time;
-	x_max			= pdata->ts_x_max ? : 4096;
+	x_max			= 800;
 	ts->fudge_x		= pdata->ts_x_fudge ? : 4;
-	y_max			= pdata->ts_y_max ? : 4096;
+	y_max			= 480;
 	ts->fudge_y		= pdata->ts_y_fudge ? : 8;
 	ts->p_max		= pdata->ts_pressure_max ? : MAX_12BIT;
 	ts->touch_pressure	= pdata->ts_touch_pressure ? : ts->p_max;
@@ -770,6 +776,7 @@ static int __devinit tsc2005_ts_init(struct tsc2005 *ts,
 	idev->evbit[0] = BIT(EV_ABS) | BIT(EV_KEY);
 	idev->absbit[0] = BIT(ABS_X) | BIT(ABS_Y) | BIT(ABS_PRESSURE);
 	idev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
+
 	ts->idev = idev;
 
 	tsc2005_ts_setup_spi_xfer(ts);
