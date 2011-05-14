@@ -112,7 +112,7 @@ static struct lm8323_platform_data lm8323_pdata = {
 	.debounce_time	= 12,
 	.active_time	= 500,
 
-	.name		= "Internal keyboard",
+	.name		= NULL,  // Let the module determine the device name.
 	.pwm_names[0] 	= "n810::keyboard",
 	.pwm_names[1] 	= "n810::cover",
 	//.pwm1_name	= "n810::keyboard",
